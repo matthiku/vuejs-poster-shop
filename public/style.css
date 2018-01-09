@@ -102,6 +102,10 @@ h1 {
     border-right: none;
 }
 
+.searchbar > input[type=submit]:disabled {
+    background-color: #CCC;
+    cursor: not-allowed;
+}
 .searchbar > input[type=submit] {
     background-color: black;
     padding: 1rem;
