@@ -2,27 +2,53 @@ new Vue({
   el: '#app',
   data: {
     total: 0,
-    items: [
-      { id: 0, title: 'item1', price: 2.99 },
-      { id: 1, title: 'item2', price: 3.99 },
-      { id: 2, title: 'item3', price: 5.99 }
-    ],
+    price: 9.99,
+    stock: [],
     cart: [],
-    search: ''
+    search: 'guitar',
+    lastSearch: '',
+    loading: false
+  },
+  mounted: function () {
+    // start with a basic search result
+    this.onSubmit();
   },
 
   methods: {
     onSubmit: function () {
       if (!this.search) return;
-      console.log('submitted', this.search);
+      this.loading = true;
+      this.stock = [];
+      this.$http
+        .get('/search/'.concat(this.search))
+        .then( function(resp) {
+          this.stock = resp.data;
+          this.loading = false;
+          this.lastSearch = this.search;
+        })
+      ;
     },
     addItem: function (index, decrement) {
       if (!decrement)
-        this.total += this.items[index].price;
+        this.total += this.price;
       else
-        this.total -= this.items[index].price;
+        this.total -= this.price;
+      if (this.total < 0) {
+        this.total = 0;
+        this.cart = [];
+        return;
+      }
+      var item;
+      // find the item in our stock
+      for (var j = 0; j < this.stock.length; j++) {
+        if (this.stock[j].id === index) {
+          item = this.stock[j];
+          break;
+        }
+      }
+      if (!item) return;
 
-      var item = this.items[index];
+      // check if the item already is in the cart
       for (var i = 0; i < this.cart.length; i++) {
         if (this.cart[i].id === item.id) {
           if (!decrement) {
@@ -36,8 +62,11 @@ new Vue({
         }
       }
       // item was not yet in the cart, so we add it
-      item.qty = 1;
-      this.cart.push(item);
+      this.cart.push({
+        title: item.title,
+        id: item.id,
+        qty: 1
+      });
     },
   },
 
@@ -45,7 +74,7 @@ new Vue({
     currency: function (value) {
       if (!value) return '';
       if (!isNaN(value)) {
-        return '€' + value.toFixed(2);
+        return '€'.concat(value.toFixed(2));
       }
     }
   }
