@@ -1,30 +1,44 @@
+var PRICE = 9.99;
+var LOAD_NUM = 7;
+
 new Vue({
   el: '#app',
   data: {
     total: 0,
-    price: 9.99,
-    stock: [],
+    price: PRICE,
+    visibleStock: [],
+    fullStock: [],
     cart: [],
     search: 'guitar',
     lastSearch: '',
     loading: false
   },
-  mounted: function () {
-    // start with a basic search result
-    this.onSubmit();
+  computed: {
+    moreItems: function () {
+      return this.fullStock.length > this.visibleStock.length;
+    }
   },
 
   methods: {
+    appendItems: function () {
+      // append more items to the visible stock, but not more than LOAD_NUM
+      var addMax = this.visibleStock.length + Math.min(this.fullStock.length - this.visibleStock.length, LOAD_NUM);
+      for (var index = this.visibleStock.length; index < addMax; index++) {
+        this.visibleStock.push(this.fullStock[index]);
+      }
+    },
     onSubmit: function () {
       if (!this.search) return;
       this.loading = true;
-      this.stock = [];
+      this.visibleStock = [];
       this.$http
         .get('/search/'.concat(this.search))
         .then( function(resp) {
-          this.stock = resp.data;
-          this.loading = false;
           this.lastSearch = this.search;
+          this.fullStock = resp.data;
+          // at first, show only part of the results
+          this.visibleStock = this.fullStock.slice(0, LOAD_NUM);
+          this.loading = false;
         })
       ;
     },
@@ -40,9 +54,9 @@ new Vue({
       }
       var item;
       // find the item in our stock
-      for (var j = 0; j < this.stock.length; j++) {
-        if (this.stock[j].id === index) {
-          item = this.stock[j];
+      for (var j = 0; j < this.visibleStock.length; j++) {
+        if (this.visibleStock[j].id === index) {
+          item = this.visibleStock[j];
           break;
         }
       }
@@ -77,5 +91,16 @@ new Vue({
         return '€'.concat(value.toFixed(2));
       }
     }
+  },
+  mounted: function () {
+    // start with a basic search result
+    this.onSubmit();
+
+    var vueInstance = this;
+    var elem = document.getElementById('product-list-bottom');
+    var watcher = scrollMonitor.create(elem);
+    watcher.enterViewport( function() {
+      vueInstance.appendItems();
+    });
   }
 });
